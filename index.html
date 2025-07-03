@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Caută masa ta</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background-color: #f9f9f9;
+    }
+    input {
+      padding: 10px;
+      width: 300px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 30px;
+      font-size: 18px;
+      font-weight: normal;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h2>🔍 Caută-ți masa după nume sau prenume</h2>
+  <input type="text" id="search" placeholder="Ex: Ana sau Popescu">
+  <button onclick="searchName()">Caută</button>
+  <p id="result"></p>
+
+  <script>
+    const SHEET_ID = '1j2gzr6xT8Z-SLS85-F67KCMoVKNCusHVH3SgMkLo4KQ';
+    const SHEET_NAME = 'Sheet1';
+    const API_KEY = 'AIzaSyBECsQ2uAyhBd6cIjGMHyWEnvdq_450h1o';
+
+    function normalize(text) {
+      return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    }
+
+    async function searchName() {
+      const input = document.getElementById('search').value;
+      const name = normalize(input);
+      const resultBox = document.getElementById('result');
+
+      if (!name) {
+        resultBox.innerText = 'Te rog scrie un nume!';
+        return;
+      }
+
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        console.log("Data:", data.values);
+
+        if (!data.values || data.values.length === 0) {
+          resultBox.innerText = 'Nu s-au găsit date în tabel.';
+          return;
+        }
+
+        const rows = data.values;
+        const header = rows[0];
+        const nameIndex = header.indexOf("Invitat");
+        const masaIndex = header.indexOf("Masa");
+
+        const matches = rows.filter((row, idx) => {
+          if (idx === 0) return false;
+          const sheetName = normalize(row[nameIndex] || '');
+          return sheetName.includes(name);
+        });
+
+        if (matches.length > 0) {
+          resultBox.innerText = matches.map(row => `👤 ${row[nameIndex]} → 🪑 ${row[masaIndex]}`).join('\n');
+        } else {
+          resultBox.innerText = 'Numele nu a fost găsit în listă!';
+        }
+
+      } catch (err) {
+        console.error(err);
+        resultBox.innerText = 'Eroare la conectarea cu Google Sheets.';
+      }
+    }
+  </script>
+</body>
+</html>
